@@ -5,8 +5,8 @@ BACKFILL=False
 LOCAL=True
 
 # NOTE: Change API keys here
-os.environ["HOPSWORKS_API_KEY"] = "Y6l4kEnIzbD1AutQ.RCUi4xT4wliiAO1XFwZr2YmO1DfbZQE25DM9ybYz7yz2kWyrf6hokVLyLN4SiDWy"
-modal_secret_name = "hopsworks" # alternatives: "hopsworks" "HOPSWORKS_API_KEY"
+# os.environ["HOPSWORKS_API_KEY"] 
+#modal_secret_name = "hopsworks" # alternatives: "hopsworks" "HOPSWORKS_API_KEY"
 
 if LOCAL == False:
    stub = modal.Stub()
