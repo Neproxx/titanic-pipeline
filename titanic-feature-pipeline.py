@@ -2,10 +2,10 @@ import os
 import modal
     
 BACKFILL=False
-LOCAL=False
+LOCAL=True
 
 # NOTE: Change API keys here
-# os.environ["HOPSWORKS_API_KEY"] = ""
+os.environ["HOPSWORKS_API_KEY"] = "Y6l4kEnIzbD1AutQ.RCUi4xT4wliiAO1XFwZr2YmO1DfbZQE25DM9ybYz7yz2kWyrf6hokVLyLN4SiDWy"
 modal_secret_name = "hopsworks" # alternatives: "hopsworks" "HOPSWORKS_API_KEY"
 
 if LOCAL == False:
@@ -23,9 +23,9 @@ def generate_passenger(survived, pclass=[1,2,3], age=[0,1]):
     import pandas as pd
     import random
 
-    df = pd.DataFrame({ "Pclass": [random.choice(pclass)],
-                       "Sex": [random.randint(0, 1)],
-                       "Age": [random.choice(age)],
+    df = pd.DataFrame({ "pclass": [float(random.choice(pclass))],
+                       "sex": [float(random.randint(0, 1))],
+                       "age": [float(random.choice(age))],
                       })
     df['Survived'] = survived
     return df
@@ -76,6 +76,11 @@ def fetch_and_preprocess_data():
     # Create mapping, e.g. "Child" -> 1, "Teenager" -> 2, etc...
     age_labels = ["Unknown", "Child", "Teenager", "Young Adult", "Adult", "Senior"]
     age_mapping = dict([(age_labels[i], i) for i in range(0, len(age_labels))])
+
+    df_titanic["Survived"] = df_titanic["Survived"].astype(int)
+    df_titanic["Pclass"] = df_titanic["Pclass"].astype(float)
+    df_titanic["Sex"] = df_titanic["Sex"].astype(float)
+    
     
     # Aggregate ages into categories / bins
     df_titanic["Age"] = pd.cut(
@@ -84,9 +89,13 @@ def fetch_and_preprocess_data():
         labels=age_labels,
     )
     df_titanic["Age"] = df_titanic["Age"].apply(lambda a: age_mapping[a])
+
+    df_titanic["Age"] = df_titanic["Age"].astype(float)
+
+    print(df_titanic.dtypes)
     # Note: without astype int, the age column will be of type category
     # and become string on hopsworks
-    return df_titanic.astype(int)
+    return df_titanic
 
 
 def g():
