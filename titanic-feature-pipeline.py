@@ -43,7 +43,6 @@ def get_random_titanic_passenger():
 
     # randomly pick one of these 2 and write it to the featurestore
     pick_random = random.uniform(0,2)
-    print("pick_random: ", pick_random)
     if pick_random >= 1:
         passenger_df = survived_df
         print("Survived added")
