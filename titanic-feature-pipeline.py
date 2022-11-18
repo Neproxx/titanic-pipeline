@@ -6,7 +6,7 @@ LOCAL=True
 
 # NOTE: Change API keys here
 # os.environ["HOPSWORKS_API_KEY"] 
-#modal_secret_name = "hopsworks" # alternatives: "hopsworks" "HOPSWORKS_API_KEY"
+modal_secret_name = "HOPSWORKS_API_KEY" # alternatives: "hopsworks" "HOPSWORKS_API_KEY"
 
 if LOCAL == False:
    stub = modal.Stub()
@@ -23,11 +23,11 @@ def generate_passenger(survived, pclass=[1,2,3], age=[0,1]):
     import pandas as pd
     import random
 
-    df = pd.DataFrame({ "pclass": [float(random.choice(pclass))],
-                       "sex": [float(random.randint(0, 1))],
-                       "age": [float(random.choice(age))],
+    df = pd.DataFrame({ "pclass": [random.choice(pclass)],
+                       "sex": [random.randint(0, 1)],
+                       "age": [random.choice(age)],
                       })
-    df['Survived'] = survived
+    df['survived'] = survived
     return df
 
 def get_random_titanic_passenger():
@@ -43,6 +43,7 @@ def get_random_titanic_passenger():
 
     # randomly pick one of these 2 and write it to the featurestore
     pick_random = random.uniform(0,2)
+    print("pick_random: ", pick_random)
     if pick_random >= 1:
         passenger_df = survived_df
         print("Survived added")
@@ -76,11 +77,6 @@ def fetch_and_preprocess_data():
     # Create mapping, e.g. "Child" -> 1, "Teenager" -> 2, etc...
     age_labels = ["Unknown", "Child", "Teenager", "Young Adult", "Adult", "Senior"]
     age_mapping = dict([(age_labels[i], i) for i in range(0, len(age_labels))])
-
-    df_titanic["Survived"] = df_titanic["Survived"].astype(int)
-    df_titanic["Pclass"] = df_titanic["Pclass"].astype(float)
-    df_titanic["Sex"] = df_titanic["Sex"].astype(float)
-    
     
     # Aggregate ages into categories / bins
     df_titanic["Age"] = pd.cut(
@@ -90,12 +86,11 @@ def fetch_and_preprocess_data():
     )
     df_titanic["Age"] = df_titanic["Age"].apply(lambda a: age_mapping[a])
 
-    df_titanic["Age"] = df_titanic["Age"].astype(float)
+    df_titanic.columns = [c.lower() for c in df_titanic.columns]
 
-    print(df_titanic.dtypes)
     # Note: without astype int, the age column will be of type category
     # and become string on hopsworks
-    return df_titanic
+    return df_titanic.astype(int)
 
 
 def g():
@@ -113,7 +108,7 @@ def g():
     titanic_fg = fs.get_or_create_feature_group(
         name="titanic_modal",
         version=1,
-        primary_key=["Survived","Pclass","Sex","Age"], 
+        primary_key=["survived","pclass","sex","age"], 
         description="Titanic survival dataset")
     titanic_fg.insert(titanic_df, write_options={"wait_for_job" : False})
 
