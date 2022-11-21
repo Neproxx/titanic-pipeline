@@ -6,7 +6,7 @@ modal_secret_name = "HOPSWORKS_API_KEY" # alternatives: "hopsworks" "HOPSWORKS_A
 
 if LOCAL == False:
    stub = modal.Stub()
-   image = modal.Image.debian_slim().apt_install(["libgomp1"]).pip_install(["hopsworks", "seaborn", "joblib", "scikit-learn"])
+   image = modal.Image.debian_slim().apt_install(["libgomp1"]).pip_install(["hopsworks", "seaborn", "joblib", "scikit-learn", "xgboost"])
 
    @stub.function(image=image, schedule=modal.Period(days=1), secret=modal.Secret.from_name(modal_secret_name))
    def f():
@@ -23,6 +23,7 @@ def g():
     from hsml.schema import Schema
     from hsml.model_schema import ModelSchema
     import joblib
+    import xgboost as xgb
 
     # You have to set the environment variable 'HOPSWORKS_API_KEY' for login to succeed
     project = hopsworks.login()
@@ -43,7 +44,7 @@ def g():
                                           query=query)
 
     X_train, X_test, y_train, y_test = feature_view.train_test_split(0.2)
-    model = KNeighborsClassifier(n_neighbors=2)
+    model = xgb.XGBClassifier()
     model.fit(X_train, y_train.values.ravel())
 
     # Evaluate

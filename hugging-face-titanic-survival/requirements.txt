@@ -1,5 +1,3 @@
 hopsworks
 joblib
 scikit-learn
-pandas
-xgboost
