@@ -1,9 +1,8 @@
-import os
 import modal
     
 LOCAL=False
 
-#os.environ["HOPSWORKS_API_KEY"] = "Y6l4kEnIzbD1AutQ.RCUi4xT4wliiAO1XFwZr2YmO1DfbZQE25DM9ybYz7yz2kWyrf6hokVLyLN4SiDWy"
+#os.environ["HOPSWORKS_API_KEY"] = "..."
 
 if LOCAL == False:
    stub = modal.Stub()
@@ -37,9 +36,7 @@ def g():
     feature_view = fs.get_feature_view(name="titanic_modal", version=1)
     batch_data = feature_view.get_batch_data()
     
-    print(batch_data.tail())
     y_pred = model.predict(batch_data)
-    # print(y_pred)
     passenger = y_pred[y_pred.size-1]
     dataset_api = project.get_dataset_api()
 
