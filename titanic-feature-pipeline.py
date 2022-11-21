@@ -1,11 +1,11 @@
 import os
 import modal
 
-BACKFILL=True
+BACKFILL=False
 LOCAL=False
 
 # NOTE: Change API keys here
-#os.environ["HOPSWORKS_API_KEY"] = "..."
+#os.environ["HOPSWORKS_API_KEY"] = ""
 modal_secret_name = "HOPSWORKS_API_KEY" # alternatives: "hopsworks" "HOPSWORKS_API_KEY"
 
 if LOCAL == False:
@@ -20,6 +20,7 @@ def generate_passenger(survived, fare_max, fare_min, pclass=[1,2,3], age=[0,1]):
     """
     Returns a single titanic passenger as a single row in a DataFrame
     """
+
     import pandas as pd
     import random
 
@@ -28,6 +29,7 @@ def generate_passenger(survived, fare_max, fare_min, pclass=[1,2,3], age=[0,1]):
                        "Age": [random.choice(age)],
                        "Fare": [random.randint(fare_min,fare_max)],
                       })
+
     df['Survived'] = survived
     return df
 
@@ -38,9 +40,9 @@ def get_random_titanic_passenger():
     import random
 
     # create a survivor with class 1-2 and age Child-Teenager
-    survived_df = generate_passenger(1, pclass=[1,2], age=[1,2],fare_max=10,fare_min=300)
+    survived_df = generate_passenger(1, pclass=[1,2], age=[1,2],fare_min=5, fare_max=10)
     # create a non-survivor with class 2-3 and age Young Adult - Senior
-    died_df = generate_passenger(0, pclass=[2,3], age=[3,4,5],fare_min=0,fare_max=100)
+    died_df = generate_passenger(0, pclass=[2,3], age=[3,4,5],fare_min=0,fare_max=4)
 
     # randomly pick one of these 2 and write it to the featurestore
     pick_random = random.uniform(0,2)
@@ -51,7 +53,7 @@ def get_random_titanic_passenger():
         passenger_df = died_df
         print("Deceased added")
 
-    return passenger_df
+    return passenger_df.astype(int)
 
 def fetch_and_preprocess_data():
 
@@ -91,8 +93,9 @@ def fetch_and_preprocess_data():
 
     df_titanic["Age"] = df_titanic["Age"].apply(lambda a: age_mapping[a])
 
-    fare_bins = [-1,10,25,50,75,100,125,150,200,250,300,600]
-    fare_bin_labels = [1,2,3,4,5,6, 7, 8, 9,10,11]
+    fare_max = df_titanic["Fare"].max()
+    fare_bins = [-1,10,25,50,75,100,125,150,200,250,300,fare_max]
+    fare_bin_labels = [0,1,2,3,4,5,6,7,8,9,10]
     df_titanic["Fare"] = pd.cut(df_titanic['Fare'], fare_bins, labels = fare_bin_labels)
 
     # Many inputs appear multiple times, so we have to discard duplicates,
@@ -121,14 +124,8 @@ def fetch_and_preprocess_data():
     df_titanic = df_titanic.drop_duplicates(subset=input_cols)
     df_titanic["Survived"] = df_titanic.apply(get_label, axis=1)
     df_titanic = df_titanic.reset_index(drop=True).astype(int)
-    df_titanic.info()
 
-    print(df_titanic)
-    # %%
-
-    # Note: without astype int, the age column will be of type category
-    # and become string on hopsworks
-    return df_titanic.astype(int)
+    return df_titanic
 
 
 def g():
