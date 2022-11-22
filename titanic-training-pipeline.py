@@ -63,6 +63,7 @@ def g():
     if os.path.isdir(model_dir) == False:
         os.mkdir(model_dir)
     joblib.dump(model, model_dir + "/titanic_model.pkl")
+    model.save_model(model_dir + "/titanic_model.json") # xgboost has problems with pickle
     fig.savefig(model_dir + "/confusion_matrix.png")
 
     # Specify the schema of the model's input/output (names, data types, ...)
