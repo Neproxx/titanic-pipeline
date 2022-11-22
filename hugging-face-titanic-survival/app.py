@@ -5,22 +5,26 @@ import requests
 
 import hopsworks
 import joblib
+import xgboost as xgb
 
 project = hopsworks.login()
 fs = project.get_feature_store()
 
 
 mr = project.get_model_registry()
-model = mr.get_model("titanic_modal", version=1)
+model = mr.get_model("titanic_modal", version=3) # NOTE: Choose version as needed
 model_dir = model.download()
-model = joblib.load(model_dir + "/titanic_model.pkl")
+# model = joblib.load(model_dir + "/titanic_model.pkl")
+model = xgb.XGBClassifier()
+model.load_model(model_dir + "/titanic_model.json") # xgboost has problems with pickle
 
 
-def titanic(passenger_class, sex, age):
+def titanic(passenger_class, sex, age, fare):
     input_list = []
     input_list.append(pclass_mapping[passenger_class])
     input_list.append(sex_mapping[sex])
     input_list.append(age_mapping[age])
+    input_list.append(int(fare))
     
     # access with [0] because predict returns a list of predictions
     y_pred = model.predict(np.asarray(input_list).reshape(1, -1))[0]
@@ -49,9 +53,13 @@ demo = gr.Interface(
     description="Specify a passenger and predict whether he would have survived.",
     allow_flagging="never",
     inputs=[
-        gr.inputs.Dropdown(default="Upper Class", choices=[k for k in pclass_mapping.keys()], label="Passenger Class"),
+        gr.inputs.Dropdown(default="Middle Class", choices=[k for k in pclass_mapping.keys()], label="Passenger Class"),
         gr.inputs.Dropdown(default="Female", choices=[k for k in sex_mapping.keys()], label="Sex"),
         gr.inputs.Dropdown(default="Child", choices=[k for k in age_mapping.keys()], label="Age"),
+        gr.inputs.Slider(minimum=1, maximum=10, default=8, step=1, label="ticket price category"),
+        # add integer slider
+
+
         ],
     outputs=gr.Image(type="pil"))
 

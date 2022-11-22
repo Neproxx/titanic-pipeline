@@ -1,11 +1,11 @@
 import os
 import modal
 
-BACKFILL=True
+BACKFILL=False
 LOCAL=False
 
 # NOTE: Change API keys here
-#os.environ["HOPSWORKS_API_KEY"] = "..."
+#os.environ["HOPSWORKS_API_KEY"] = ""
 modal_secret_name = "HOPSWORKS_API_KEY" # alternatives: "hopsworks" "HOPSWORKS_API_KEY"
 
 if LOCAL == False:
@@ -20,38 +20,54 @@ def generate_passenger(survived, fare_max, fare_min, pclass=[1,2,3], age=[0,1]):
     """
     Returns a single titanic passenger as a single row in a DataFrame
     """
+
     import pandas as pd
     import random
 
-    df = pd.DataFrame({ "Pclass": [random.choice(pclass)],
-                       "Sex": [random.randint(0, 1)],
-                       "Age": [random.choice(age)],
-                       "Fare": [random.randint(fare_min,fare_max)],
+    df = pd.DataFrame({ "pclass": [random.choice(pclass)],
+                       "sex": [random.randint(0, 1)],
+                       "age": [random.choice(age)],
+                       "fare": [random.randint(fare_min,fare_max)],
                       })
-    df['Survived'] = survived
+
+    df['survived'] = survived
     return df
+
+def is_unique(df_full, df_passenger):
+    """Checks if the generated passenger represents a unique data point"""
+    df = df_full.drop_duplicates().append(df_passenger)
+    return not df.duplicated().any()
+    
 
 def get_random_titanic_passenger():
     """
     Returns a DataFrame containing one random titanic passenger
     """
     import random
+    import hopsworks
 
-    # create a survivor with class 1-2 and age Child-Teenager
-    survived_df = generate_passenger(1, pclass=[1,2], age=[1,2],fare_max=10,fare_min=300)
-    # create a non-survivor with class 2-3 and age Young Adult - Senior
-    died_df = generate_passenger(0, pclass=[2,3], age=[3,4,5],fare_min=0,fare_max=100)
+    project = hopsworks.login()
+    fs = project.get_feature_store()
+    titanic_fg = fs.get_feature_group(name="titanic_modal", version=1)
+    df_full = titanic_fg.read()
 
-    # randomly pick one of these 2 and write it to the featurestore
-    pick_random = random.uniform(0,2)
-    if pick_random >= 1:
-        passenger_df = survived_df
-        print("Survived added")
-    else:
-        passenger_df = died_df
-        print("Deceased added")
+    # randomly pick one of these 2 and write it to the featurestore if it is a unique datapoint
+    max_tries = 100
+    for i in range(max_tries):
+        if random.uniform(0,2) >= 1:
+            # create a survivor with class 2-3 and age Child-Teenager
+            df_passenger = generate_passenger(1, pclass=[2,3], age=[1,2],fare_min=0, fare_max=4)
+        else:
+            # create a non-survivor with class 1 and age Adult - Senior
+            df_passenger = generate_passenger(0, pclass=[1], age=[4,5],fare_min=5,fare_max=10)
+        
+        if is_unique(df_full, df_passenger):
+            print(f"Return data point after {i} tries")
+            print(df_passenger)
+            return df_passenger.astype(int)
 
-    return passenger_df
+    print(f"Could not generate a unique datapoint after {max_tries} tries")
+
 
 def fetch_and_preprocess_data():
 
@@ -91,8 +107,9 @@ def fetch_and_preprocess_data():
 
     df_titanic["Age"] = df_titanic["Age"].apply(lambda a: age_mapping[a])
 
-    fare_bins = [-1,10,25,50,75,100,125,150,200,250,300,600]
-    fare_bin_labels = [1,2,3,4,5,6, 7, 8, 9,10,11]
+    fare_max = df_titanic["Fare"].max()
+    fare_bins = [-1,10,25,50,75,100,125,150,200,250,300,fare_max]
+    fare_bin_labels = [0,1,2,3,4,5,6,7,8,9,10]
     df_titanic["Fare"] = pd.cut(df_titanic['Fare'], fare_bins, labels = fare_bin_labels)
 
     # Many inputs appear multiple times, so we have to discard duplicates,
@@ -121,14 +138,9 @@ def fetch_and_preprocess_data():
     df_titanic = df_titanic.drop_duplicates(subset=input_cols)
     df_titanic["Survived"] = df_titanic.apply(get_label, axis=1)
     df_titanic = df_titanic.reset_index(drop=True).astype(int)
-    df_titanic.info()
+    df_titanic.columns = df_titanic.columns.str.lower()
 
-    print(df_titanic)
-    # %%
-
-    # Note: without astype int, the age column will be of type category
-    # and become string on hopsworks
-    return df_titanic.astype(int)
+    return df_titanic
 
 
 def g():

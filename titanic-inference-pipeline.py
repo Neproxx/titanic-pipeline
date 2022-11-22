@@ -1,14 +1,13 @@
-import os
 import modal
     
 LOCAL=False
 
-os.environ["HOPSWORKS_API_KEY"] = "Y6l4kEnIzbD1AutQ.RCUi4xT4wliiAO1XFwZr2YmO1DfbZQE25DM9ybYz7yz2kWyrf6hokVLyLN4SiDWy"
+#os.environ["HOPSWORKS_API_KEY"] = "..."
 
 if LOCAL == False:
    stub = modal.Stub()
-   hopsworks_image = modal.Image.debian_slim().pip_install(["hopsworks","joblib","seaborn","scikit-learn","dataframe-image"])
-   @stub.function(image=hopsworks_image, schedule=modal.Period(days=1), secret=modal.Secret.from_name("hopsworks"))
+   hopsworks_image = modal.Image.debian_slim().pip_install(["hopsworks","joblib","seaborn","scikit-learn","dataframe-image","xgboost"])
+   @stub.function(image=hopsworks_image, schedule=modal.Period(days=1), secret=modal.Secret.from_name("HOPSWORKS_API_KEY"))
    def f():
        g()
 
@@ -38,12 +37,16 @@ def g():
     batch_data = feature_view.get_batch_data()
     
     y_pred = model.predict(batch_data)
-    # print(y_pred)
     passenger = y_pred[y_pred.size-1]
     dataset_api = project.get_dataset_api()
 
     print(f'Survival predicted: {passenger}')
 
+    smiley_url = "https://raw.githubusercontent.com/Neproxx/titanic-pipeline/main/assets/" + str(passenger) + ".jpg"
+    img = Image.open(requests.get(smiley_url, stream=True).raw)
+    img.save("./latest_passenger.png")
+    dataset_api = project.get_dataset_api()
+    dataset_api.upload("./latest_passenger.png", "Resources/images", overwrite=True)
     ## PREDICTION COMPLETE
 
     titanic_fg = fs.get_feature_group(name="titanic_modal", version=1)
@@ -57,11 +60,16 @@ def g():
         label_name = "Survived"
 
     print("Actual Survivial status: " + label_name)
+    label_url = "https://raw.githubusercontent.com/Neproxx/titanic-pipeline/main/assets/" + str(label) + ".jpg"
+    img_raw = requests.get(label_url, stream=True).raw
+    img = Image.open(img_raw)
+    img.save("./actual_passenger.png")
+    dataset_api.upload("./actual_passenger.png", "Resources/images", overwrite=True)
 
-    monitor_fg = fs.get_or_create_feature_group(name="titanic-predictions",
+    monitor_fg = fs.get_or_create_feature_group(name="titanic_predictions",
                                                 version=1,
                                                 primary_key=["datetime"],
-                                                description="Titanic Passenger Survival Prediction/Outcome Monitoring"
+                                                description="Titanic Passenger Survival Prediction Outcome Monitoring"
                                                 )
     
     now = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
@@ -88,9 +96,9 @@ def g():
     predictions = history_df[['prediction']]
     labels = history_df[['label']]
 
-    # Only create the confusion matrix when our iris_predictions feature group has examples of all 3 iris flowers
+    # Only create the confusion matrix when enough predictions are available
     print("Number of predictions to date: " + str(predictions.value_counts().count()))
-    if predictions.value_counts().count() == 3:
+    if predictions.value_counts().count() == 2:
         results = confusion_matrix(labels, predictions)
     
         df_cm = pd.DataFrame(results, ['True Dead', 'True Survivor'],
@@ -101,8 +109,8 @@ def g():
         fig.savefig("./confusion_matrix.png")
         dataset_api.upload("./confusion_matrix.png", "Resources/images", overwrite=True)
     else:
-        print("You need 3 different passenger predictions to create the confusion matrix.")
-        print("Run the batch inference pipeline more times until you get 3 different passenger predictions") 
+        print("You need 2 different passenger predictions to create the confusion matrix.")
+        print("Run the batch inference pipeline more times until you get 2 different passenger predictions") 
 
 
 if __name__ == "__main__":
