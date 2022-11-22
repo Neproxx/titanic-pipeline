@@ -16,11 +16,12 @@ model_dir = model.download()
 model = joblib.load(model_dir + "/titanic_model.pkl")
 
 
-def titanic(passenger_class, sex, age):
+def titanic(passenger_class, sex, age, fare):
     input_list = []
     input_list.append(pclass_mapping[passenger_class])
     input_list.append(sex_mapping[sex])
     input_list.append(age_mapping[age])
+    input_list.append(fare)
     
     # access with [0] because predict returns a list of predictions
     y_pred = model.predict(np.asarray(input_list).reshape(1, -1))[0]
@@ -52,6 +53,7 @@ demo = gr.Interface(
         gr.inputs.Dropdown(default="Upper Class", choices=[k for k in pclass_mapping.keys()], label="Passenger Class"),
         gr.inputs.Dropdown(default="Female", choices=[k for k in sex_mapping.keys()], label="Sex"),
         gr.inputs.Dropdown(default="Child", choices=[k for k in age_mapping.keys()], label="Age"),
+        gr.inputs.Slider(minimum=1, maximum=10, default=8, label="ticket price category"),
         ],
     outputs=gr.Image(type="pil"))
 
