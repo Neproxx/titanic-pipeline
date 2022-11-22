@@ -24,36 +24,50 @@ def generate_passenger(survived, fare_max, fare_min, pclass=[1,2,3], age=[0,1]):
     import pandas as pd
     import random
 
-    df = pd.DataFrame({ "Pclass": [random.choice(pclass)],
-                       "Sex": [random.randint(0, 1)],
-                       "Age": [random.choice(age)],
-                       "Fare": [random.randint(fare_min,fare_max)],
+    df = pd.DataFrame({ "pclass": [random.choice(pclass)],
+                       "sex": [random.randint(0, 1)],
+                       "age": [random.choice(age)],
+                       "fare": [random.randint(fare_min,fare_max)],
                       })
 
-    df['Survived'] = survived
+    df['survived'] = survived
     return df
+
+def is_unique(df_full, df_passenger):
+    """Checks if the generated passenger represents a unique data point"""
+    df = df_full.drop_duplicates().append(df_passenger)
+    return not df.duplicated().any()
+    
 
 def get_random_titanic_passenger():
     """
     Returns a DataFrame containing one random titanic passenger
     """
     import random
+    import hopsworks
 
-    # create a survivor with class 1-2 and age Child-Teenager
-    survived_df = generate_passenger(1, pclass=[1,2], age=[1,2],fare_min=5, fare_max=10)
-    # create a non-survivor with class 2-3 and age Young Adult - Senior
-    died_df = generate_passenger(0, pclass=[2,3], age=[3,4,5],fare_min=0,fare_max=4)
+    project = hopsworks.login()
+    fs = project.get_feature_store()
+    titanic_fg = fs.get_feature_group(name="titanic_modal", version=1)
+    df_full = titanic_fg.read()
 
-    # randomly pick one of these 2 and write it to the featurestore
-    pick_random = random.uniform(0,2)
-    if pick_random >= 1:
-        passenger_df = survived_df
-        print("Survived added")
-    else:
-        passenger_df = died_df
-        print("Deceased added")
+    # randomly pick one of these 2 and write it to the featurestore if it is a unique datapoint
+    max_tries = 100
+    for i in range(max_tries):
+        if random.uniform(0,2) >= 1:
+            # create a survivor with class 2-3 and age Child-Teenager
+            df_passenger = generate_passenger(1, pclass=[2,3], age=[1,2],fare_min=0, fare_max=4)
+        else:
+            # create a non-survivor with class 1 and age Adult - Senior
+            df_passenger = generate_passenger(0, pclass=[1], age=[4,5],fare_min=5,fare_max=10)
+        
+        if is_unique(df_full, df_passenger):
+            print(f"Return data point after {i} tries")
+            print(df_passenger)
+            return df_passenger.astype(int)
 
-    return passenger_df.astype(int)
+    print(f"Could not generate a unique datapoint after {max_tries} tries")
+
 
 def fetch_and_preprocess_data():
 
@@ -124,6 +138,7 @@ def fetch_and_preprocess_data():
     df_titanic = df_titanic.drop_duplicates(subset=input_cols)
     df_titanic["Survived"] = df_titanic.apply(get_label, axis=1)
     df_titanic = df_titanic.reset_index(drop=True).astype(int)
+    df_titanic.columns = df_titanic.columns.str.lower()
 
     return df_titanic
 
