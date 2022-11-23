@@ -9,7 +9,7 @@ This repository contains the code for the first assignment in the course ID2223 
 
 Assuming that you have set up the API keys for all of the platforms, follow the steps below to deploy the application:
 
-1. Execute `titanic-feature-pipeline.py` (either locally or on Modal), but make sure that the variable `BACKFILL` is set to True. This will download the original Titanic dataset, preprocess it and store the features and labels on Hopsworks. We chose to keep only the three most intuitive features as input to the model in order to ensure a good experience when interacting with the model on Hugging Face. The features we kept are the passenger class, sex and age.
+1. Execute `titanic-feature-pipeline.py` (either locally or on Modal), but make sure that the variable `BACKFILL` is set to True. This will download the original Titanic dataset, preprocess it and store the features and labels on Hopsworks. We chose to keep only the four most intuitive features as input to the model in order to ensure a good experience when interacting with the model on Hugging Face. The features we kept are the passenger class, sex, age and ticket price.
 
 ```console
 python titanic-feature-pipeline.py
@@ -40,3 +40,5 @@ modal app deploy titanic-batch-inference-pipeline.py
 5. Finally, create two separate spaces on Hugging Face based on the contents of the folders `huggingface-spaces-titanic` (UI to interact with the model) and `huggingface-spaces-titanic-monitor` (Dashboard summarizing the latest results). Note however, that the dashboard app does not include results obtained with the interactive UI.
 
 After following these steps, you have deployed a scalable and modular machine learning pipeline that re-trains the model regularly on a never ending incoming stream of data. Furthermore, you have deployed the model on an endpoint where you can interact with it and created a Dashboard to monitor model performance. Congrats!
+
+To see how the result should look like, check out the [interactive UI](https://huggingface.co/spaces/Neprox/Titanic-Survival) and [monitoring dashboard](https://huggingface.co/spaces/Neprox/Titanic-Monitoring) on Huggingface.
